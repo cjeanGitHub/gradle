@@ -9,14 +9,18 @@
  */
 package com.cjean.new_type;
 
+import org.apache.commons.codec.digest.DigestUtils;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.nio.MappedByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import static java.util.Map.Entry.comparingByKey;
 import static java.util.Map.Entry.comparingByValue;
 import static java.util.stream.Collectors.toMap;
 
@@ -24,46 +28,94 @@ import static java.util.stream.Collectors.toMap;
  * @author 14172
  * @create 2020/3/21
  * @since 1.0.0
- *
- *
+ * <p>
+ * <p>
  * Java 判断两个文件是否相同
- *     使用Java 如何判断两个文件是否相同呢？我的做法是
- *
+ * 使用Java 如何判断两个文件是否相同呢？我的做法是
+ * <p>
  * （1）先比较两个文件内容的长度；
- *
+ * <p>
  * （2）在长度相同的情况下，再比较两个文件的MD5值。
  * <dependency>
- *             <groupId>commons-codec</groupId>
- *             <artifactId>commons-codec</artifactId>
- *             <version>1.11</version>
- *         </dependency>
- *
- *
- *         /**
- *      * 验证两个文件字节流是否相等
- *      * @return boolean true 相等
- *      * @throws IOException
- *
- *private static boolean isSameFiles(byte[]fileByte1,byte[]fileByte2){
-        *String firstFileMd5=DigestUtils.md5Hex(fileByte1);
-        *String secondFileMd5=DigestUtils.md5Hex(fileByte2);
-        *if(firstFileMd5.equals(secondFileMd5)){
-        *System.out.println("---- equals ------ md5 "+firstFileMd5);
-        *return true;
-        *}else{
-        *System.out.println(firstFileMd5+" is firstFileMd5 ++ unequal ++ secondFileMd5 = "+secondFileMd5);
-        *return false;
-        *}
-        *}
+ * <groupId>commons-codec</groupId>
+ * <artifactId>commons-codec</artifactId>
+ * <version>1.11</version>
+ * </dependency>
+ * <p>
+ * <p>
+ * /**
+ * * 验证两个文件字节流是否相等
+ * * @return boolean true 相等
+ * * @throws IOException
+ * <p>
+ * private static boolean isSameFiles(byte[]fileByte1,byte[]fileByte2){
+ * String firstFileMd5=DigestUtils.md5Hex(fileByte1);
+ * String secondFileMd5=DigestUtils.md5Hex(fileByte2);
+ * if(firstFileMd5.equals(secondFileMd5)){
+ * System.out.println("---- equals ------ md5 "+firstFileMd5);
+ * return true;
+ * }else{
+ * System.out.println(firstFileMd5+" is firstFileMd5 ++ unequal ++ secondFileMd5 = "+secondFileMd5);
+ * return false;
+ * }
+ * }
  */
 public class DelAnyFIleByfileSize {
+
+
+    private static void findSameFileAndCreatNote(List<String> folderPaths) {
+        System.out.println("获取文件的位置，并将文件中的文件位置全路径和文件大小放入map，并且对所有文件件逐一对比字节");
+        System.out.println("文件对比开始");
+        List<String> paths = new ArrayList<>();
+        folderPaths.stream()
+                .map(
+                        folderPath -> {
+                            File f = new File(folderPath);
+                            File[] fs = f.listFiles();
+                            if (fs == null) {
+                                return null;
+                            }
+                            Stream<File> fileStream = Arrays.stream(fs);
+                            fileStream
+                                    .map(file -> {
+                                        paths.add(file.getAbsolutePath());
+                                        return file;
+                                    })
+                                    .collect(Collectors.toList()).toArray();
+                            return folderPath;
+                        }
+                )
+                .collect(Collectors.toList());
+
+        StringBuilder stringBuilder1 = new StringBuilder();
+
+        for (int index = 0; index < paths.size(); index++) {
+            if (index == (paths.size())) {
+                break;
+            }
+            for (int i = (index+1); i < paths.size(); i++) {
+                if (isSameFiles(toByteArray(paths.get(index)), toByteArray(paths.get(i)))) {
+                    stringBuilder1.append("文件: " + paths.get(index) + " 与文件 " + paths.get(i) + "对比， 结果：相同");
+                    stringBuilder1.append("\n");
+                } else {
+                    stringBuilder1.append("文件: " + paths.get(index) + " 与文件 " + paths.get(i) + "对比， 结果：不相同");
+                    stringBuilder1.append("\n");
+                }
+            }
+        }
+
+        CreateNoteByStr(stringBuilder1.toString(), "result");
+        System.out.println("文件对比结束");
+    }
+
+
     //首先获取文件的位置，并将文件中的文件位置全路径和文件大小放入map，将文件大小放入list
 
     private static List addFIlePathAndSizeInList(List<String> folderPaths) {
         System.out.println("获取文件的位置，并将文件中的文件位置全路径和文件大小放入map，将文件大小放入list");
         List pathAndSizeList = new ArrayList<Object>();
-        HashMap<String, String> pathAndSizHashMap = new HashMap<>();
-        Set<String> sizeList = new LinkedHashSet<>();
+        HashMap<String, Long> pathAndSizHashMap = new HashMap<>();
+        Set<Long> sizeList = new LinkedHashSet<>();
         folderPaths.stream()
                 .map(
                         folderPath -> {
@@ -76,8 +128,8 @@ public class DelAnyFIleByfileSize {
                             Stream<File> fileStream = Arrays.stream(fs);
                             fileStream
                                     .map(file -> {
-                                        pathAndSizHashMap.put(file.getAbsolutePath(), "" + file.length());
-                                        sizeList.add("" + file.length());
+                                        pathAndSizHashMap.put(file.getAbsolutePath(), file.length());
+                                        sizeList.add(file.length());
                                         return file;
                                     })
                                     .collect(Collectors.toList()).toArray();
@@ -85,6 +137,7 @@ public class DelAnyFIleByfileSize {
                         }
                 )
                 .collect(Collectors.toList());
+
         pathAndSizeList.add(pathAndSizHashMap);
         pathAndSizeList.add(sizeList);
 
@@ -93,17 +146,19 @@ public class DelAnyFIleByfileSize {
     }
 
     //传根据文件大小删除指定文件
-    private static void delTheFilesByFIleSizes(Set<String> sizeList, HashMap<String, String> pathAndSizHashMap) {
+    private static void delTheFilesByFIleSizes(Set<Long> sizeList, HashMap<String, Long> pathAndSizHashMap) {
         System.out.println("传根据文件大小删除指定文件");
-        HashMap<String, String> needDelPathAndSizHashMap = new HashMap<>();
+        HashMap<String, Long> needDelPathAndSizHashMap = new HashMap<>();
         sizeList.stream()
                 .map(size -> {
                     int sameSizCount = 0;
 
-                    for (Map.Entry<String, String> entry : pathAndSizHashMap.entrySet()) {
+                    for (Map.Entry<String, Long> entry : pathAndSizHashMap.entrySet()) {
                         if (size.equals(entry.getValue())) {
                             sameSizCount++;
-                            if (sameSizCount > 1) needDelPathAndSizHashMap.put(entry.getKey(), entry.getValue());
+                            if (sameSizCount > 1) {
+                                needDelPathAndSizHashMap.put(entry.getKey(), entry.getValue());
+                            }
                         }
                     }
 
@@ -123,36 +178,46 @@ public class DelAnyFIleByfileSize {
     }
 
     // 根据文件大小查询文件所在的位置并生成记录文件
-    private static void findSameSizeFilePathAndCreatNote(Set<String> sizeList, HashMap<String, String> pathAndSizHashMap) {
+    private static void findSameSizeFilePathAndCreatNote(Set<Long> sizeList, HashMap<String, Long> pathAndSizHashMap) {
         System.out.println("根据文件大小查询文件所在的位置并生成记录文件");
-        Map<String, String> sameSizePathAndSizHashMap = new HashMap<>();
-        Set<String> SamplsizeList = new LinkedHashSet<>();
+        Map<String, Long> sameSizePathAndSizHashMap = new HashMap<>();
+        Set<Long> SamplsizeList = new LinkedHashSet<>();
         sizeList.stream()
                 .map(size -> {
                     int sameSizCount = 0;
 
-                    for (Map.Entry<String, String> entry : pathAndSizHashMap.entrySet()) {
+                    for (Map.Entry<String, Long> entry : pathAndSizHashMap.entrySet()) {
                         if (size.equals(entry.getValue())) {
                             sameSizCount++;
-                            if (sameSizCount > 1) SamplsizeList.add(size);
+                            if (sameSizCount > 1) {
+                                SamplsizeList.add(size);
+                            }
                         }
                     }
 
                     return size;
                 })
                 .collect(Collectors.toList());
+
+        HashMap<Long, List<String>> sizePathsMap = new HashMap<>();
 
         SamplsizeList.stream()
                 .map(size -> {
-                    for (Map.Entry<String, String> entry : pathAndSizHashMap.entrySet()) {
+                    ArrayList<String> paths = new ArrayList<>();
+
+                    for (Map.Entry<String, Long> entry : pathAndSizHashMap.entrySet()) {
                         if (size.equals(entry.getValue())) {
+                            paths.add(entry.getKey());
                             sameSizePathAndSizHashMap.put(entry.getKey(), entry.getValue());
+
                         }
                     }
+                    sizePathsMap.put(size, paths);
 
                     return size;
                 })
                 .collect(Collectors.toList());
+
 
         StringBuilder stringBuilder = new StringBuilder();
 
@@ -173,8 +238,13 @@ public class DelAnyFIleByfileSize {
 //                        toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e2,
 //                                LinkedHashMap::new));
 
+        // 文件大小的文件位置集合，根据md5判断文件的内容是不是一样
+        //获取每个大小相同的文件路径，放入一个list中，根据下标使用冒泡排序的模式对比每个大小相同的文件内容是不是一样
+//        sameSizePathAndSizHashMap
+
+
         // 按key排序 升序 comparingByKey，按vale comparingByValue
-        Map<String, String> sorted = sameSizePathAndSizHashMap
+        Map<String, Long> sorted = sameSizePathAndSizHashMap
                 .entrySet()
                 .stream()
                 .sorted(comparingByValue())
@@ -185,25 +255,25 @@ public class DelAnyFIleByfileSize {
         for (String key : sorted.keySet()) {
             StringBuilder colKey = new StringBuilder(key);
             if (70 > key.length()) {
-                for (int i=0; i<(70 - key.length());i++) {
+                for (int i = 0; i < (70 - key.length()); i++) {
                     colKey = colKey.append(" ");
                 }
             }
             String chengeKey = colKey.toString();
 
-            stringBuilder.append(chengeKey+"--> "+sorted.get(key));
+            stringBuilder.append(chengeKey + "--> " + sorted.get(key));
             stringBuilder.append("\n");
         }
-        CreateNoteByStr(stringBuilder.toString());
+        CreateNoteByStr(stringBuilder.toString(), "note");
 
         System.out.println("根据文件大小查询文件所在的位置并生成记录文件，完成");
     }
 
-    private static void CreateNoteByStr(String noteStr) {
+    private static void CreateNoteByStr(String noteStr, String resultFileName) {
 
         System.out.println("开始写入文件！");
-        String fileName = "note.txt";
-        String localTipsPath = "F:\\test";
+        String fileName = resultFileName + ".txt";
+        String localTipsPath = "D:\\createFolder\\test";
         File dectionary = new File(localTipsPath);
         if (!dectionary.exists()) {
             dectionary.mkdirs();
@@ -233,12 +303,60 @@ public class DelAnyFIleByfileSize {
         }
     }
 
+    /**
+     * Mapped File way MappedByteBuffer 可以在处理大文件时，提升性能
+     *
+     * @param filename
+     * @return
+     * @throws IOException
+     */
+    public static byte[] toByteArray(String filename) {
+
+        FileChannel fc = null;
+        try {
+            fc = new RandomAccessFile(filename, "r").getChannel();
+            MappedByteBuffer byteBuffer = fc.map(FileChannel.MapMode.READ_ONLY, 0,
+                    fc.size()).load();
+            System.out.println(byteBuffer.isLoaded());
+            byte[] result = new byte[(int) fc.size()];
+            if (byteBuffer.remaining() > 0) {
+                // System.out.println("remain");
+                byteBuffer.get(result, 0, byteBuffer.remaining());
+            }
+            return result;
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            try {
+                fc.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 验证两个文件字节流是否相等
+     *
+     * @return boolean true 相等
+     * @throws IOException
+     */
+    private static boolean isSameFiles(byte[] fileByte1, byte[] fileByte2) {
+        String firstFileMd5 = DigestUtils.md5Hex(fileByte1);
+        String secondFileMd5 = DigestUtils.md5Hex(fileByte2);
+        if (firstFileMd5.equals(secondFileMd5)) {
+            return true;
+        } else {
+            return false;
+        }
+    }
 
     public static void main(String[] args) {
         List<String> folderPaths = new ArrayList<>();
-        folderPaths.add("E:\\my");
-        folderPaths.add("C:\\my");
-        folderPaths.add("D:\\my");
+        folderPaths.add("D:\\my1");
+        folderPaths.add("D:\\my2");
+        folderPaths.add("D:\\my3");
 //        folderPaths.add("I:\\java达内入门\\12\\迅雷下载");
 //        folderPaths.add("I:\\java达内入门\\yirenzhixia");
 //        folderPaths.add("I:\\java达内入门\\一人之下2");
@@ -247,9 +365,11 @@ public class DelAnyFIleByfileSize {
 //                (Set<String>) addFIlePathAndSizeInList(folderPaths).get(1)
 //                , (HashMap<String, String>) addFIlePathAndSizeInList(folderPaths).get(0));
 
-        findSameSizeFilePathAndCreatNote(
-                (Set<String>) addFIlePathAndSizeInList(folderPaths).get(1)
-                , (HashMap<String, String>) addFIlePathAndSizeInList(folderPaths).get(0));
+//        findSameSizeFilePathAndCreatNote(
+//                (Set<Long>) addFIlePathAndSizeInList(folderPaths).get(1)
+//                , (HashMap<String, Long>) addFIlePathAndSizeInList(folderPaths).get(0));
+
+        findSameFileAndCreatNote(folderPaths);
     }
 
 
