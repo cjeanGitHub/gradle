@@ -1,12 +1,3 @@
-/**
- * Copyright (C), 2015-2020, XXX有限公司
- * FileName: ArrayTest
- * Author:   14172
- * Date:     2020/3/21 9:11
- * History:
- * <author>          <time>          <version>          <desc>
- * 作者姓名           修改时间           版本号              描述
- */
 package com.cjean.new_type;
 
 /**
@@ -19,6 +10,7 @@ public class ArrayTest {
         long l = 9223372036854774807L;
 
         String s = ""+l;
+        System.out.println("w这是测试提交的");
         System.out.println(s);
 
     }
