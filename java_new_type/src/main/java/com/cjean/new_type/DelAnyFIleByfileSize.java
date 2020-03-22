@@ -28,41 +28,15 @@ import static java.util.stream.Collectors.toMap;
  * @author 14172
  * @create 2020/3/21
  * @since 1.0.0
- * <p>
- * <p>
- * Java 判断两个文件是否相同
- * 使用Java 如何判断两个文件是否相同呢？我的做法是
- * <p>
- * （1）先比较两个文件内容的长度；
- * <p>
- * （2）在长度相同的情况下，再比较两个文件的MD5值。
- * <dependency>
- * <groupId>commons-codec</groupId>
- * <artifactId>commons-codec</artifactId>
- * <version>1.11</version>
- * </dependency>
- * <p>
- * <p>
- * /**
- * * 验证两个文件字节流是否相等
- * * @return boolean true 相等
- * * @throws IOException
- * <p>
- * private static boolean isSameFiles(byte[]fileByte1,byte[]fileByte2){
- * String firstFileMd5=DigestUtils.md5Hex(fileByte1);
- * String secondFileMd5=DigestUtils.md5Hex(fileByte2);
- * if(firstFileMd5.equals(secondFileMd5)){
- * System.out.println("---- equals ------ md5 "+firstFileMd5);
- * return true;
- * }else{
- * System.out.println(firstFileMd5+" is firstFileMd5 ++ unequal ++ secondFileMd5 = "+secondFileMd5);
- * return false;
- * }
- * }
  */
 public class DelAnyFIleByfileSize {
 
-
+    /***
+     * @Description:
+     * 获取文件的位置，并将文件中的文件位置全路径和文件大小放入map，
+     * 并且对所有文件件逐一对比字节
+     * 适合2G一下的文件，超过2G的大文件需要多线程去处理
+     */
     private static void findSameFileAndCreatNote(List<String> folderPaths) {
         System.out.println("获取文件的位置，并将文件中的文件位置全路径和文件大小放入map，并且对所有文件件逐一对比字节");
         System.out.println("文件对比开始");
@@ -93,13 +67,13 @@ public class DelAnyFIleByfileSize {
             if (index == (paths.size())) {
                 break;
             }
-            for (int i = (index+1); i < paths.size(); i++) {
+            for (int i = (index + 1); i < paths.size(); i++) {
                 if (isSameFiles(toByteArray(paths.get(index)), toByteArray(paths.get(i)))) {
                     stringBuilder1.append("文件: " + paths.get(index) + " 与文件 " + paths.get(i) + "对比， 结果：相同");
                     stringBuilder1.append("\n");
                 } else {
-                    stringBuilder1.append("文件: " + paths.get(index) + " 与文件 " + paths.get(i) + "对比， 结果：不相同");
-                    stringBuilder1.append("\n");
+//                    stringBuilder1.append("文件: " + paths.get(index) + " 与文件 " + paths.get(i) + "对比， 结果：不相同");
+//                    stringBuilder1.append("\n");
                 }
             }
         }
@@ -111,7 +85,7 @@ public class DelAnyFIleByfileSize {
 
     //首先获取文件的位置，并将文件中的文件位置全路径和文件大小放入map，将文件大小放入list
 
-    private static List addFIlePathAndSizeInList(List<String> folderPaths) {
+    private static List addFilePathAndSizeInList(List<String> folderPaths) {
         System.out.println("获取文件的位置，并将文件中的文件位置全路径和文件大小放入map，将文件大小放入list");
         List pathAndSizeList = new ArrayList<Object>();
         HashMap<String, Long> pathAndSizHashMap = new HashMap<>();
@@ -354,22 +328,22 @@ public class DelAnyFIleByfileSize {
 
     public static void main(String[] args) {
         List<String> folderPaths = new ArrayList<>();
-        folderPaths.add("D:\\my1");
-        folderPaths.add("D:\\my2");
-        folderPaths.add("D:\\my3");
-//        folderPaths.add("I:\\java达内入门\\12\\迅雷下载");
-//        folderPaths.add("I:\\java达内入门\\yirenzhixia");
-//        folderPaths.add("I:\\java达内入门\\一人之下2");
+//        folderPaths.add("D:\\my1");
+//        folderPaths.add("D:\\my2");
+//        folderPaths.add("D:\\my3");
+        folderPaths.add("F:\\java达内入门\\12\\迅雷下载");
+        folderPaths.add("F:\\java达内入门\\yirenzhixia");
+        folderPaths.add("F:\\java达内入门\\一人之下2");
 
 //        delTheFilesByFIleSizes(
-//                (Set<String>) addFIlePathAndSizeInList(folderPaths).get(1)
-//                , (HashMap<String, String>) addFIlePathAndSizeInList(folderPaths).get(0));
+//                (Set<String>) addFilePathAndSizeInList(folderPaths).get(1)
+//                , (HashMap<String, String>) addFilePathAndSizeInList(folderPaths).get(0));
 
-//        findSameSizeFilePathAndCreatNote(
-//                (Set<Long>) addFIlePathAndSizeInList(folderPaths).get(1)
-//                , (HashMap<String, Long>) addFIlePathAndSizeInList(folderPaths).get(0));
+        findSameSizeFilePathAndCreatNote(
+                (Set<Long>) addFilePathAndSizeInList(folderPaths).get(1)
+                , (HashMap<String, Long>) addFilePathAndSizeInList(folderPaths).get(0));
 
-        findSameFileAndCreatNote(folderPaths);
+//        findSameFileAndCreatNote(folderPaths);//适合2G一下的文件，超过2G的大文件需要多线程去处理
     }
 
 
